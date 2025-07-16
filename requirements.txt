@@ -16,12 +16,13 @@ reportlab>=3.6
 # --- WhisperX (aktuelle Version direkt von GitHub) ---
 git+https://github.com/m-bain/whisperx.git@main#egg=whisperx
 
-# --- Torch & Audio (muss ≥2.x sein für WhisperX) ---
+# --- Torch & Audio (WhisperX erfordert ≥2.x) ---
 torch>=2.0.1
 torchaudio>=2.5.1
 
-# --- TTS für Meeting-Audio (falls genutzt) ---
+# --- TTS (edge-tts) ---
 edge-tts>=0.12
 
-# --- Speaker-Diarisation (pyannote.audio ≥3.x kompatibel mit torchaudio≥2.x) ---
-pyannote.audio==3.1.1
+# --- Speaker-Diarisation (Version, die mit WhisperX kompatibel ist) ---
+pyannote.audio>=3.3.2,<4.0
+
