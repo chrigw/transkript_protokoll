@@ -1,22 +1,24 @@
 FROM python:3.10-slim
 
-# System-Packages
+# 1) System-Packages installieren (inkl. git für Pip-Git-URLs)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get install -y --no-install-recommends \
+      ffmpeg \
+      git \
+      ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# nur requirements.txt kopieren
+# 2) Python-Abhängigkeiten (cached as long as requirements.txt is unchanged)
 COPY requirements.txt .
-
-# alle Python-Deps installieren (inkl. whisperx via Git-Link)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# übrigen Code kopieren
+# 3) Restlichen Code kopieren
 COPY . .
 
+# 4) Port (nur dokumentativ, Render nutzt $PORT)
 EXPOSE 5000
 
-# auf $PORT binden (Render setzt $PORT automatisch)
+# 5) Start auf dem von Render vorgegebenen Port
 CMD ["sh","-c","exec gunicorn flask_transkript_app:app --bind 0.0.0.0:$PORT --workers 3"]
