@@ -30,5 +30,7 @@ COPY . .
 EXPOSE 5000
 
 # ---------- 7) Start-Befehl ----------
-# Gunicorn mit 3 Workern; passt die Zahl nach Bedarf an
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "flask_transkript_app:app", "--workers", "3"]
+# # Gunicorn mit 3 Workern; passt die Zahl nach Bedarf an
+# CMD ["gunicorn", "--bind", "0.0.0.0:5000", "flask_transkript_app:app", "--workers", "3"]
+# bind an $PORT  
+CMD ["sh","-c","exec gunicorn flask_transkript_app:app --bind 0.0.0.0:$PORT --workers 3"]
