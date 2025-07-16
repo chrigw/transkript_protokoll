@@ -1,6 +1,25 @@
-flask
-edge-tts
-openai-whisper
-pydub
-ffmpeg-python
+# requirements.txt
+
+# Web-Framework & server
+Flask
 gunicorn
+
+# Environment-Var handling
+python-dotenv
+
+# OpenAI-Client
+openai
+
+# PDF-Export
+reportlab
+
+# WhisperX (aktuelle Version direkt von GitHub)
+git+https://github.com/m-bain/whisperx.git@main#egg=whisperx
+
+# Core Speech/ML Dependencies
+torch
+torchaudio
+edge-tts
+
+# Speaker-Diarisation (pinne auf 0.0.1, um Kompatibilität zu wahren)
+pyannote.audio==0.0.1
