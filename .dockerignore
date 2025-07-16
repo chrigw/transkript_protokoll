@@ -1,0 +1,6 @@
+.env
+ffmpeg.exe
+__pycache__/
+*.pyc
+input_data/
+output_data/
