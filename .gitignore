@@ -1,0 +1,17 @@
+# ---------- Ignoriere die komplette Datei ----------
+install_deps.py
+
+# ---------- Ignoriere lokale Binaries ----------
+# Versteckt Datei ffmpeg.exe in Projekt-Root
+ffmpeg.exe
+ffmpeg-7.1.1-essentials_build.zip
+
+# ---------- Ignoriere Secrets ----------
+.env
+
+# ---------- Ignoriere den kompletten Ordner und alles darin ----------
+ablage/
+.venv/
+.idea/
+input_data/
+output_data/
