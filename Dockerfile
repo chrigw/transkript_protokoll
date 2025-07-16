@@ -1,26 +1,34 @@
-# 1. Wähle ein schlankes Python-Image
+# ---------- 1) Basis-Image ----------
 FROM python:3.10-slim
 
-# 2. System-Dependencies installieren (hier FFmpeg)
+# ---------- 2) System-Pakete installieren ----------
+# - ffmpeg für die Transkription
+# - evtl. git, falls du Pakete direkt von GitHub ziehst
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
-    apt-get clean && \
+    apt-get install -y --no-install-recommends \
+      ffmpeg \
+      git && \
     rm -rf /var/lib/apt/lists/*
 
-# 3. Arbeitsverzeichnis festlegen
+# ---------- 3) Arbeitsverzeichnis ----------
 WORKDIR /app
 
-# 4. Nur Pip-Dependencies kopieren, um Caching zu nutzen
+# ---------- 4) Abhängigkeiten kopieren & installieren ----------
+# Kopiere nur requirements.txt, damit dieser Layer gecacht wird, solange sich
+# deine Python-Dependencies nicht ändern.
 COPY requirements.txt .
 
-# 5. Python-Dependencies installieren
+# Pip ohne Cache, damit das Image klein bleibt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Restlichen Quellcode kopieren
+# ---------- 5) Restlichen Code kopieren ----------
+# Jetzt kommt dein gesamter Quellcode hinzu. Ändert sich hier etwas, wird
+# nicht erneut 'pip install' ausgeführt.
 COPY . .
 
-# 7. Port freigeben (Flask läuft standardmäßig auf 5000)
+# ---------- 6) Port freigeben ----------
 EXPOSE 5000
 
-# 8. Start-Befehl: starte deine Flask-App mit Gunicorn
-CMD ["gunicorn", "flask_transkript_app:app", "--bind", "0.0.0.0:5000", "--workers", "3"]
+# ---------- 7) Start-Befehl ----------
+# Gunicorn mit 3 Workern; passt die Zahl nach Bedarf an
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "flask_transkript_app:app", "--workers", "3"]
