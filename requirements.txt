@@ -1,25 +1,27 @@
 # requirements.txt
 
-# Web-Framework & server
-Flask
-gunicorn
+# --- Web-Framework & Server ---
+Flask>=2.0
+gunicorn>=20.0
 
-# Environment-Var handling
-python-dotenv
+# --- Env-Handling ---
+python-dotenv>=1.0
 
-# OpenAI-Client
-openai
+# --- OpenAI-Client ---
+openai>=0.27
 
-# PDF-Export
-reportlab
+# --- PDF-Export ---
+reportlab>=3.6
 
-# WhisperX (aktuelle Version direkt von GitHub)
+# --- WhisperX (aktuelle Version direkt von GitHub) ---
 git+https://github.com/m-bain/whisperx.git@main#egg=whisperx
 
-# Core Speech/ML Dependencies
-torch
-torchaudio
-edge-tts
+# --- Torch & Audio (muss ≥2.x sein für WhisperX) ---
+torch>=2.0.1
+torchaudio>=2.5.1
 
-# Speaker-Diarisation (pinne auf 0.0.1, um Kompatibilität zu wahren)
-pyannote.audio==0.0.1
+# --- TTS für Meeting-Audio (falls genutzt) ---
+edge-tts>=0.12
+
+# --- Speaker-Diarisation (pyannote.audio ≥3.x kompatibel mit torchaudio≥2.x) ---
+pyannote.audio==3.1.1
