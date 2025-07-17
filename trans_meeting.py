@@ -66,7 +66,7 @@ def transkribiere_audio_mit_diarisation(audio_pfad, sprache="de"):
     Transkribiert Audio mit WhisperX und führt anschließend Sprecher-Diarisation durch.
     """
     # Auf CPU: float32 statt float16, um Fehler zu vermeiden
-    model = whisperx.load_model("small", device, compute_type="float32")
+    model = whisperx.load_model("tiny", device, compute_type="float32")
     result = model.transcribe(audio_pfad, batch_size=16, language=sprache)
 
     print("🔗 VAD-Segmente zuordnen…")
