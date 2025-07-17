@@ -6,7 +6,7 @@ services:
     name: transkript-tool  # exakt dein Service-Name bei Render
     branch: main           # Branch, der deployed werden soll
     dockerfilePath: Dockerfile
-    buildContext: .
+    dockerContext: .
     envVars:               # Umgebungsvariable PORT setzen, statt containerPort
       - key: PORT
         value: "10000"     # Render leitet Traffic auf diesen Port in Deinem Container weiter :contentReference[oaicite:3]{index=3}
