@@ -1,6 +1,6 @@
 # render.yaml
 services:
-  - type: web_service        # Docker‐basiert
+  - kind: web_service        # Docker‐basiert
     name: transkript-tool    # Dein Service‐Name bei Render
     env: docker              # zwingt auf Docker‐Environment
     branch: main             # Branch, den Render deployen soll
