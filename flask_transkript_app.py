@@ -8,6 +8,11 @@ import glob
 
 app = Flask(__name__)
 
+# Health-Check-Route
+@app.route("/health")
+def health():
+    return "OK", 200
+
 # Pfade konfigurieren
 BASE_DIR    = os.path.abspath(os.path.dirname(__file__))
 INPUT_DIR   = os.path.join(BASE_DIR, "input_data")
