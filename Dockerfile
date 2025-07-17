@@ -18,7 +18,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # 4) Port (nur dokumentativ, Render nutzt $PORT)
-EXPOSE 5000
+# Exponiere den von Render vorgegebenen Port
+# (Render setzt zur Laufzeit PORT=10000)
+EXPOSE 10000
 
 # 5) Start auf dem von Render vorgegebenen Port mit hohem Timeout (600 s)
 CMD ["sh","-c","exec gunicorn flask_transkript_app:app \
