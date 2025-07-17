@@ -1,10 +1,15 @@
-# render.yaml
+# render.yaml (im Repo-Root)
+
 services:
-  - type: web        # Docker‐basiert
-    name: transkript-tool    # Dein Service‐Name bei Render
-    env: docker              # zwingt auf Docker‐Environment
-    branch: main             # Branch, den Render deployen soll
+  - type: web              # Web-Service (nicht web_service) :contentReference[oaicite:1]{index=1}
+    runtime: docker        # Docker-Umgebung :contentReference[oaicite:2]{index=2}
+    name: transkript-tool  # exakt dein Service-Name bei Render
+    branch: main           # Branch, der deployed werden soll
     dockerfilePath: Dockerfile
     buildContext: .
-    containerPort: 10000     # <<< hier sagst Du Render, auf Port 10000 zu pingen
+    envVars:               # Umgebungsvariable PORT setzen, statt containerPort
+      - key: PORT
+        value: "10000"     # Render leitet Traffic auf diesen Port in Deinem Container weiter :contentReference[oaicite:3]{index=3}
+    healthCheckPath: /health  # optional, wenn Du eine schnelle Health-Route benutzt
     autoDeploy: true
+
