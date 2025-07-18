@@ -1,6 +1,6 @@
 # transkript_protokoll
 
-Ein einfaches Tool zur Transkription von Audio- oder Videodateien (z. B. .mp3, .wav, .mp4) in Textform, geeignet für die Erstellung von Gesprächsprotokollen, Interviewmitschnitten oder Notizen.
+Ein einfaches Tool zur Transkription von Audiodateien in Textform, geeignet für die Erstellung von Gesprächsprotokollen, Interviewmitschnitten oder Notizen.
 
 ## 🛠 Voraussetzungen
 
