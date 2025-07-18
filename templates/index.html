@@ -1,5 +1,3 @@
-<!-- templates/index.html -->
-
 <!doctype html>
 <html lang="de">
 <head>
@@ -21,7 +19,8 @@
 
     <div class="card mb-4 shadow-sm">
       <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
+        <!-- Form mit ID für JS -->
+        <form id="transcribe-form" method="post" enctype="multipart/form-data">
           <div class="mb-3">
             <label for="audio_file" class="form-label">Audiodatei hochladen</label>
             <input class="form-control" type="file" id="audio_file" name="audio_file" accept="audio/*" required>
@@ -29,13 +28,11 @@
 
           <div class="mb-3">
             <label for="prompt" class="form-label">Prompt (anpassbar)</label>
-            <textarea class="form-control" id="prompt" name="prompt" rows="10">{% raw %}
+            <textarea class="form-control" id="prompt" name="prompt" rows="8">{% raw %}
 Du bist ein KI-Protokoll-Assistent. Analysiere das folgende Meeting-Transkript und erstelle:
 1. Eine Zusammenfassung der Hauptpunkte
 2. Eine Liste der getroffenen Entscheidungen
 3. Eine Liste aller To-Dos mit Namen (falls genannt)
-
-Am Ende gib bitte **zusätzlich** das **vollständige** Transkript **noch einmal** aus.
 
 Transkript:
 {transkript}
@@ -56,27 +53,78 @@ Gib die Antwort im folgenden Format aus:
 {% endraw %}</textarea>
           </div>
 
-          <button type="submit" class="btn btn-primary">Transkribieren</button>
+          <button type="submit" class="btn btn-primary" id="submit-btn">Transkribieren</button>
+
+          <!-- Spinner, initially hidden -->
+          <div id="loading" class="text-center mt-3" style="display:none;">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Lädt...</span>
+            </div>
+            <p class="mt-2">Transkription läuft… bitte Geduld!</p>
+          </div>
         </form>
       </div>
     </div>
 
-    {% if transcript %}
-      <div class="card mb-4 shadow-sm">
-        <div class="card-header">
-          <h5 class="mb-0">Ergebnis</h5>
+    <!-- Ergebnis-Container mit ID, wird per JS ausgetauscht -->
+    <div id="result-container">
+      {% if transcript %}
+        <div class="card mb-4 shadow-sm">
+          <div class="card-header">
+            <h5 class="mb-0">Ergebnis</h5>
+          </div>
+          <div class="card-body">
+            <pre class="bg-white p-3">{{ transcript }}</pre>
+            {% if excerpt_pdf_url %}
+              <a href="{{ excerpt_pdf_url }}" class="btn btn-success mt-3">Protokoll-Auszug als PDF herunterladen</a>
+            {% endif %}
+          </div>
         </div>
-        <div class="card-body">
-          <pre class="bg-white p-3">{{ transcript }}</pre>
-          {% if excerpt_pdf_url %}
-            <a href="{{ excerpt_pdf_url }}" class="btn btn-success mt-3">Protokoll-Auszug als PDF herunterladen</a>
-          {% endif %}
-        </div>
-      </div>
-    {% endif %}
+      {% endif %}
+    </div>
 
   </div>
+
   <!-- Bootstrap JS (optional) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- AJAX & Spinner-Logic -->
+  <script>
+    const form = document.getElementById("transcribe-form");
+    const submitBtn = document.getElementById("submit-btn");
+    const loading = document.getElementById("loading");
+    const resultContainer = document.getElementById("result-container");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      // UI: disable button, show spinner, hide old results
+      submitBtn.disabled = true;
+      loading.style.display = "block";
+      resultContainer.style.display = "none";
+
+      // Sende das Formular per Fetch
+      const res = await fetch(form.action || "/", {
+        method: form.method,
+        body: new FormData(form),
+      });
+
+      // Empfange komplettes HTML, parse & tausche nur das result-container DIV aus
+      const html = await res.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const newResult = doc.getElementById("result-container");
+      if (newResult) {
+        resultContainer.replaceWith(newResult);
+      }
+
+      // UI: re-enable button & hide spinner
+      submitBtn.disabled = false;
+      loading.style.display = "none";
+      // Wenn ein Ergebnis existiert, wieder einblenden
+      const updated = document.getElementById("result-container");
+      if (updated) updated.style.display = "";
+    });
+  </script>
 </body>
 </html>
+
