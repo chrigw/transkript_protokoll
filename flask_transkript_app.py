@@ -1,11 +1,15 @@
 # flask_transkript_app.py
 
 from flask import Flask, request, render_template, send_file, url_for
+from dotenv import load_dotenv
 import os
 import subprocess
 import sys
 import glob
 import uuid
+
+# Env-Datei einlesen (SKIP_TRIMMING, USER_PROMPT, …)
+load_dotenv()
 
 app = Flask(__name__)
 
