@@ -20,7 +20,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.lib.enums import TA_LEFT
 
-# .env-Datei laden (OPENAI_API_KEY, HUGGINGFACE_HUB_TOKEN)
+# .env-Datei laden (OPENAI_API_KEY, HUGGINGFACE_HUB_TOKEN, SKIP_DIARIZATION)
 load_dotenv()
 
 # Gerät für WhisperX wählen
@@ -34,6 +34,11 @@ hf_token = (
 )
 if not hf_token:
     print("⚠️ Kein HuggingFace-Token gesetzt. Diarization-Pipeline könnte nicht geladen werden.")
+
+# Optional: Speaker-Diarisation überspringen?
+skip_diarization = os.getenv("SKIP_DIARIZATION", "false").lower() in ("1", "true", "yes")
+if skip_diarization:
+    print("⚠️ SKIP_DIARIZATION=true → Speaker-Diarisation wird übersprungen.")
 
 # PATH anpassen, damit ffmpeg & Co. gefunden werden
 os.environ["PATH"] = os.path.abspath(".") + os.pathsep + os.environ.get("PATH", "")
@@ -63,34 +68,33 @@ async def erstelle_meeting_audio():
 
 def transkribiere_audio_mit_diarisation(audio_pfad, sprache="de"):
     """
-    Transkribiert Audio mit WhisperX und führt anschließend Sprecher-Diarisation durch.
+    Transkribiert Audio mit WhisperX und optional mit Sprecher-Diarisation.
     """
-    # Auf CPU: float32 statt float16, um Fehler zu vermeiden
+    # WhisperX-Modell laden (hier: tiny für geringeren Speicherbedarf)
     model = whisperx.load_model("tiny", device, compute_type="float32")
     result = model.transcribe(audio_pfad, batch_size=16, language=sprache)
 
+    segments = result["segments"]
+    output = []
+
+    if skip_diarization:
+        # Nur reine Transkript-Segmente, ohne Speaker-Labels
+        for seg in segments:
+            output.append((seg["start"], seg["end"], "Sprecher", seg["text"]))
+        return output
+
+    # Mit Diarisation:
     print("🔗 VAD-Segmente zuordnen…")
-    # DiarizationPipeline benötigt zwingend model_name:
     diarization = DiarizationPipeline(
         model_name="pyannote/speaker-diarization-3.1",
         use_auth_token=hf_token,
         device=device
-    )  # :contentReference[oaicite:0]{index=0}
-
-    # führt die Diarisation aus und erhält ein DataFrame mit Zeitfenstern + Speaker-Labels
+    )
     diarize_df = diarization(audio_pfad)
+    result = whisperx.assign_word_speakers(diarize_df, result)
 
-    # ordnet die Speaker-Labels den Whisper-Segmenten zu
-    result = whisperx.assign_word_speakers(diarize_df, result)  # :contentReference[oaicite:1]{index=1}
-
-    # zurück in eine einfache Liste für die weitere Verarbeitung
-    output = []
     for seg in result["segments"]:
-        start   = seg["start"]
-        end     = seg["end"]
-        speaker = seg.get("speaker", "Sprecher")
-        text    = seg["text"]
-        output.append((start, end, speaker, text))
+        output.append((seg["start"], seg["end"], seg.get("speaker", "Sprecher"), seg["text"]))
     return output
 
 
