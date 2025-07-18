@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import glob
+import uuid
 
 app = Flask(__name__)
 
@@ -13,12 +14,13 @@ app = Flask(__name__)
 def health():
     return "OK", 200
 
-# Pfade konfigurieren
+# Basis-Pfade
 BASE_DIR    = os.path.abspath(os.path.dirname(__file__))
 INPUT_DIR   = os.path.join(BASE_DIR, "input_data")
 OUTPUT_DIR  = os.path.join(BASE_DIR, "output_data")
 SCRIPT_PATH = os.path.join(BASE_DIR, "trans_meeting.py")
 
+# Stelle sicher, dass Basis-Ordner existieren
 os.makedirs(INPUT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -35,14 +37,26 @@ def index():
         if not file or not file.filename:
             error = "Keine Datei ausgewählt."
         else:
-            # Audiodatei speichern
-            input_path = os.path.join(INPUT_DIR, file.filename)
+            # Einmalige Session-ID erzeugen
+            session_id = uuid.uuid4().hex
+
+            # Session-spezifische Ordner anlegen
+            session_input  = os.path.join(INPUT_DIR,  session_id)
+            session_output = os.path.join(OUTPUT_DIR, session_id)
+            os.makedirs(session_input,  exist_ok=True)
+            os.makedirs(session_output, exist_ok=True)
+
+            # Audiodatei in den Session-Input-Ordner speichern
+            input_path = os.path.join(session_input, file.filename)
             file.save(input_path)
 
-            # Environment kopieren und ggf. USER_PROMPT setzen
+            # Environment für den Subprocess kopieren & anpassen
             env = os.environ.copy()
+            # Prompt per ENV weitergeben
             if prompt:
                 env["USER_PROMPT"] = prompt
+            # OUTPUT_DIR für das Transkriptionsskript setzen
+            env["OUTPUT_DIR"] = session_output
 
             # Transkriptionsskript aufrufen
             proc = subprocess.run(
@@ -56,7 +70,7 @@ def index():
             stdout = proc.stdout.decode("utf-8", errors="replace")
             stderr = proc.stderr.decode("utf-8", errors="replace")
 
-            # Logging
+            # Logging für Debug
             print("=== Transkriptionsskript STDOUT ===")
             print(stdout)
             print("=== Transkriptionsskript STDERR ===")
@@ -69,9 +83,9 @@ def index():
                     f"<pre>STDOUT:\n{stdout or '<leer>'}\nSTDERR:\n{stderr or '<leer>'}</pre>"
                 )
             else:
-                # Transkript aus output_data laden
+                # 1) Transkript aus Session-Output laden
                 base     = os.path.splitext(file.filename)[0]
-                txt_path = os.path.join(OUTPUT_DIR, f"{base}.txt")
+                txt_path = os.path.join(session_output, f"{base}.txt")
                 if os.path.exists(txt_path):
                     with open(txt_path, "r", encoding="utf-8") as f:
                         transcript = f.read()
@@ -79,16 +93,20 @@ def index():
                     transcript = stdout
                 else:
                     # Fallback: suche beliebige TXT-Datei mit Basisnamen
-                    matches = glob.glob(os.path.join(OUTPUT_DIR, f"{base}*.txt"))
+                    matches = glob.glob(os.path.join(session_output, f"{base}*.txt"))
                     if matches:
                         with open(matches[0], "r", encoding="utf-8") as f:
                             transcript = f.read()
 
-                # Protokoll-Auszug-PDF finden
-                pdf_matches = glob.glob(os.path.join(OUTPUT_DIR, "*auszug*.pdf"))
+                # 2) Protokoll-Auszug-PDF finden
+                pdf_matches = glob.glob(os.path.join(session_output, "*auszug*.pdf"))
                 if pdf_matches:
                     latest_pdf = max(pdf_matches, key=os.path.getmtime)
-                    excerpt_pdf_url = url_for("download_file", filename=os.path.basename(latest_pdf))
+                    excerpt_pdf_url = url_for(
+                        "download_file",
+                        session_id=session_id,
+                        filename=os.path.basename(latest_pdf)
+                    )
 
     return render_template(
         "index.html",
@@ -97,10 +115,15 @@ def index():
         error=error
     )
 
-@app.route("/download/<filename>")
-def download_file(filename):
-    path = os.path.join(OUTPUT_DIR, filename)
+# Download-Route mit Session-ID
+@app.route("/download/<session_id>/<filename>")
+def download_file(session_id, filename):
+    path = os.path.join(OUTPUT_DIR, session_id, filename)
     return send_file(path, as_attachment=True)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
