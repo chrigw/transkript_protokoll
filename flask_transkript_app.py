@@ -24,6 +24,11 @@ SCRIPT_PATH = os.path.join(BASE_DIR, "trans_meeting.py")
 os.makedirs(INPUT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Optional: Audio-Trimming überspringen, wenn env var gesetzt ist
+skip_trimming = os.getenv("SKIP_TRIMMING", "false").lower() in ("1", "true", "yes")
+if skip_trimming:
+    print("⚠️ SKIP_TRIMMING=true → Audio-Trimmen wird übersprungen.")
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     transcript      = None
@@ -47,15 +52,32 @@ def index():
             os.makedirs(session_output, exist_ok=True)
 
             # Audiodatei in den Session-Input-Ordner speichern
-            input_path = os.path.join(session_input, file.filename)
-            file.save(input_path)
+            original_path = os.path.join(session_input, file.filename)
+            file.save(original_path)
+            input_path = original_path
+
+            # --- optional: Audiodatei trimmen (erste 10 Sekunden) ---
+            if not skip_trimming:
+                trimmed_path = os.path.join(session_input, f"trimmed_{file.filename}")
+                try:
+                    subprocess.run([
+                        "ffmpeg", "-y",
+                        "-ss", "0",
+                        "-i", original_path,
+                        "-t", "10",
+                        "-c", "copy",
+                        trimmed_path
+                    ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    input_path = trimmed_path
+                    print(f"✅ Audio-Datei getrimmt: {trimmed_path}")
+                except subprocess.CalledProcessError as e:
+                    print(f"❌ Fehler beim Trimmen der Audio-Datei: {e}")
+                    # Falls Trimmen fehlschlägt, weiter mit original_path
 
             # Environment für den Subprocess kopieren & anpassen
             env = os.environ.copy()
-            # Prompt per ENV weitergeben
             if prompt:
                 env["USER_PROMPT"] = prompt
-            # OUTPUT_DIR für das Transkriptionsskript setzen
             env["OUTPUT_DIR"] = session_output
 
             # Transkriptionsskript aufrufen
@@ -70,7 +92,7 @@ def index():
             stdout = proc.stdout.decode("utf-8", errors="replace")
             stderr = proc.stderr.decode("utf-8", errors="replace")
 
-            # Logging für Debug
+            # Debug-Logging
             print("=== Transkriptionsskript STDOUT ===")
             print(stdout)
             print("=== Transkriptionsskript STDERR ===")
@@ -92,7 +114,7 @@ def index():
                 elif stdout.strip():
                     transcript = stdout
                 else:
-                    # Fallback: suche beliebige TXT-Datei mit Basisnamen
+                    # Fallback: suche beliebige TXT-Datei
                     matches = glob.glob(os.path.join(session_output, f"{base}*.txt"))
                     if matches:
                         with open(matches[0], "r", encoding="utf-8") as f:
@@ -124,6 +146,3 @@ def download_file(session_id, filename):
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
 
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
