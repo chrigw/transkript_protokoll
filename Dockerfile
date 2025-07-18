@@ -25,8 +25,8 @@ EXPOSE 10000
 # 5) Start auf dem von Render vorgegebenen Port mit hohem Timeout (600 s)
 CMD ["sh","-c","exec gunicorn flask_transkript_app:app \
   --bind 0.0.0.0:$PORT \
+  --worker-class gthread \
   --workers 1 \
   --threads 4 \
   --timeout 600 \
   --preload"]
-
