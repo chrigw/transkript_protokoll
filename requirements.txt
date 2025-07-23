@@ -14,7 +14,7 @@ openai>=0.27
 reportlab>=3.6
 
 # --- WhisperX (aktuelle Version direkt von GitHub) ---
-whisperx>=0.3.0,<0.4.0       # stabiler Release-Zweig von WhisperX
+git+https://github.com/m-bain/whisperx.git@main#egg=whisperx
 
 # --- Torch & Audio (WhisperX erfordert ≥2.x) ---
 torch>=2.0.1
