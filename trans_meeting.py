@@ -23,14 +23,18 @@ from reportlab.lib.enums import TA_LEFT
 import numpy as np
 import whisperx.audio as wx_audio
 
-
-# .env-Datei laden (OPENAI_API_KEY, HUGGINGFACE_HUB_TOKEN, SKIP_DIARIZATION)
+###########################################
+# Load environment
 load_dotenv()
 
-# Gerät für WhisperX wählen
+# Use OUTPUT_DIR from env (set by Flask) or fallback
+OUTPUT_ROOT = os.getenv("OUTPUT_DIR", "output_data")
+os.makedirs(OUTPUT_ROOT, exist_ok=True)
+
+# Device for WhisperX
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# HuggingFace Hub Token (um private/gated Pipelines laden zu können)
+# HuggingFace token for diarization
 hf_token = (
     os.getenv("HUGGINGFACE_HUB_TOKEN")
     or os.getenv("HF_TOKEN")
@@ -39,14 +43,13 @@ hf_token = (
 if not hf_token:
     print("⚠️ Kein HuggingFace-Token gesetzt. Diarization-Pipeline könnte nicht geladen werden.")
 
-# Optional: Speaker-Diarisation überspringen?
+# Skip diarization
 skip_diarization = os.getenv("SKIP_DIARIZATION", "false").lower() in ("1", "true", "yes")
 if skip_diarization:
     print("⚠️ SKIP_DIARIZATION=true → Speaker-Diarisation wird übersprungen.")
 
-# PATH anpassen, damit ffmpeg & Co. gefunden werden
+# Ensure ffmpeg available
 os.environ["PATH"] = os.path.abspath(".") + os.pathsep + os.environ.get("PATH", "")
-
 
 def pruefe_ffmpeg():
     """Stellt sicher, dass ffmpeg installiert ist."""
@@ -60,13 +63,11 @@ def pruefe_ffmpeg():
             print("⚠️ Fehler beim Abrufen der ffmpeg-Version:", e)
     else:
         print("❌ ffmpeg wurde nicht gefunden!")
-        print("🔧 Bitte installiere ffmpeg und füge es zum Systempfad hinzu.")
         sys.exit(1)
-
 
 async def erstelle_meeting_audio():
     """Erzeugt per TTS (edge_tts) ein Meeting-Audio, falls keines vorhanden."""
-    # … unveränderte edge_tts-Implementierung …
+    # ... implement TTS fallback if needed ...
     pass
 
 
@@ -74,31 +75,27 @@ def transkribiere_audio_mit_diarisation(audio_pfad, sprache="de"):
     """
     Transkribiert Audio mit WhisperX und optional mit Sprecher-Diarisation.
     """
-    # WhisperX-Modell laden (hier: tiny für geringeren Speicherbedarf)
     model = whisperx.load_model("tiny", device, compute_type="float32")
 
-    # ─── NEUER BLOCK: lade Audio via ffmpeg intern und prüfe auf None ───
+    # Load and verify audio
     audio_np = wx_audio.load_audio(str(audio_pfad))
     if audio_np is None or not isinstance(audio_np, np.ndarray):
         raise RuntimeError(f"⚠️ FFmpeg konnte '{audio_pfad}' nicht dekodieren!")
 
-    # ─── ASR-Aufruf mit dem numpy-Array statt mit dem Pfad ───
     result = model.transcribe(
         audio_np,
         batch_size=16,
         language=sprache
     )
-
-    segments = result["segments"]
+    segments = result.get("segments", [])
     output = []
 
     if skip_diarization:
-        # Nur reine Transkript-Segmente, ohne Speaker-Labels
         for seg in segments:
             output.append((seg["start"], seg["end"], "Sprecher", seg["text"]))
         return output
 
-    # Mit Diarisation:
+    # Speaker diarization
     print("🔗 VAD-Segmente zuordnen…")
     diarization = DiarizationPipeline(
         model_name="pyannote/speaker-diarization-3.1",
@@ -108,13 +105,14 @@ def transkribiere_audio_mit_diarisation(audio_pfad, sprache="de"):
     diarize_df = diarization(audio_pfad)
     result = whisperx.assign_word_speakers(diarize_df, result)
 
-    for seg in result["segments"]:
+    for seg in result.get("segments", []):
         output.append((seg["start"], seg["end"], seg.get("speaker", "Sprecher"), seg["text"]))
     return output
 
 
-def speichere_als_markdown(transkript_liste, ordner="output_data"):
+def speichere_als_markdown(transkript_liste, ordner=None):
     """Speichert das Roh-Transkript als Markdown-Datei."""
+    ordner = ordner or OUTPUT_ROOT
     os.makedirs(ordner, exist_ok=True)
     dateiname = f"protokoll_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
     pfad = os.path.join(ordner, dateiname)
@@ -133,7 +131,6 @@ def generiere_protokoll_auszug(transkript):
         return "[FEHLER] Kein API-Key vorhanden."
     client = OpenAI(api_key=api_key)
 
-    # Default-Prompt (inklusive Ausgabe des vollständigen Transkripts)
     default_prompt = f"""
 Du bist ein KI-Protokoll-Assistent. Analysiere das folgende Meeting-Transkript und erstelle:
 1. Eine Zusammenfassung der Hauptpunkte
@@ -159,8 +156,6 @@ Gib die Antwort im folgenden Format aus:
 ## Vollständiges Transkript
 {transkript}
 """
-
-    # Prüfen, ob ein Nutzer-Prompt per ENV gesetzt wurde
     template = os.getenv("USER_PROMPT")
     if template:
         try:
@@ -171,7 +166,6 @@ Gib die Antwort im folgenden Format aus:
     else:
         prompt = default_prompt
 
-    # Anfrage an OpenAI
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -187,8 +181,9 @@ Gib die Antwort im folgenden Format aus:
         return "[FEHLER] Zusammenfassung konnte nicht erstellt werden."
 
 
-def speichere_auszug(text, ordner="output_data"):
+def speichere_auszug(text, ordner=None):
     """Speichert den Protokoll-Auszug als Markdown-Datei."""
+    ordner = ordner or OUTPUT_ROOT
     os.makedirs(ordner, exist_ok=True)
     dateiname = f"protokoll_auszug_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
     pfad = os.path.join(ordner, dateiname)
@@ -198,9 +193,10 @@ def speichere_auszug(text, ordner="output_data"):
     return pfad
 
 
-def konvertiere_letzte_markdown_zu_pdf():
+def konvertiere_letzte_markdown_zu_pdf(ordner=None):
     """Konvertiert die zuletzt erstellte Markdown-Datei zu PDF."""
-    md_files = sorted(glob.glob("output_data/*.md"), key=os.path.getmtime, reverse=True)
+    ordner = ordner or OUTPUT_ROOT
+    md_files = sorted(glob.glob(f"{ordner}/*.md"), key=os.path.getmtime, reverse=True)
     if not md_files:
         print("❌ Keine Markdown-Dateien gefunden.")
         return
@@ -241,26 +237,26 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1]:
         audio_pfad = sys.argv[1]
     else:
-        # kein Argument: alter Fallback für TTS-Test
         audio_pfad = os.path.join("input_data", "meeting_audio.mp3")
         if not os.path.exists(audio_pfad):
             audio_pfad = asyncio.run(erstelle_meeting_audio())
 
     # 3) Audio transkribieren
-    transkript_liste = transkribiere_audio_mit_diarisation(audio_pfad)
-    speicherpfad_md = speichere_als_markdown(transkript_liste)
+    transkript_liste    = transkribiere_audio_mit_diarisation(audio_pfad)
+    speicherpfad_md      = speichere_als_markdown(transkript_liste)
 
     # 4) Roh-Transkript ausgeben
     print("\n📄 Transkript mit Sprechererkennung:\n")
     plain_text = "\n".join(
-        f"[{start:.1f}s–{end:.1f}s] {speaker}: {text.strip()}"
+        f"[{start:.1f}s–{end:.1f}s] {speaker}: {text.strip()}" 
         for start, end, speaker, text in transkript_liste
     )
     print(plain_text)
 
     # 5) Protokoll-Auszug generieren und speichern
-    auszug = generiere_protokoll_auszug(plain_text)
+    auszug              = generiere_protokoll_auszug(plain_text)
     speicherpfad_auszug = speichere_auszug(auszug)
 
     # 6) PDF-Konvertierung
     konvertiere_letzte_markdown_zu_pdf()
+    
