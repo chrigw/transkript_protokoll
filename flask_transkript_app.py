@@ -35,9 +35,12 @@ if skip_trimming:
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    transcript      = None
-    excerpt_pdf_url = None
-    error           = None
+    transcript                 = None
+    excerpt_pdf_url            = None
+    transcript_download_url    = None
+    transcript_filename        = None
+    saved_folder               = None
+    error                      = None
 
     if request.method == "POST":
         file   = request.files.get("audio_file")
@@ -134,10 +137,26 @@ def index():
                         filename=os.path.basename(latest_pdf)
                     )
 
+                # ─── NEUER BLOCK: Pfade & Download-URLs für Template ───
+                # Roh-Transkript Download-Link
+                if os.path.exists(txt_path):
+                    transcript_filename     = os.path.basename(txt_path)
+                    transcript_download_url = url_for(
+                        "download_file",
+                        session_id=session_id,
+                        filename=transcript_filename
+                    )
+
+                # Absoluter Pfad zum Session-Ordner (Debug/Info)
+                saved_folder = session_output
+
     return render_template(
         "index.html",
         transcript=transcript,
         excerpt_pdf_url=excerpt_pdf_url,
+        transcript_download_url=transcript_download_url,
+        transcript_filename=transcript_filename,
+        saved_folder=saved_folder,
         error=error
     )
 
@@ -149,4 +168,5 @@ def download_file(session_id, filename):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+
 
