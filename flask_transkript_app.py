@@ -73,10 +73,12 @@ def index():
                         "-ss", "0",
                         "-i", original_path,
                         "-t", "10",
-                        "-c", "copy",
-                        trimmed_path
-                    ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    input_path = trimmed_path
+                        "-ar", "16000",          # 16 kHz Sample-Rate
+                        "-ac", "1",              # Mono
+                        "-c:a", "pcm_s16le",     # WAV-Codec
+                        trimmed_wav
+                    ], check=True)
+                    input_path = trimmed_path.replace(".mp3", ".wav")
                     print(f"✅ Audio-Datei getrimmt: {trimmed_path}")
                 except subprocess.CalledProcessError as e:
                     print(f"❌ Fehler beim Trimmen der Audio-Datei: {e}")
