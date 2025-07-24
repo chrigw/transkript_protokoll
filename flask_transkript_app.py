@@ -40,6 +40,7 @@ def index():
     transcript_download_url    = None
     transcript_filename        = None
     saved_folder               = None
+    files                      = []
     error                      = None
 
     if request.method == "POST":
@@ -137,8 +138,7 @@ def index():
                         filename=os.path.basename(latest_pdf)
                     )
 
-                # ─── NEUER BLOCK: Pfade & Download-URLs für Template ───
-                # Roh-Transkript Download-Link
+                # 3) Download-Link für Roh-Transkript
                 if os.path.exists(txt_path):
                     transcript_filename     = os.path.basename(txt_path)
                     transcript_download_url = url_for(
@@ -147,8 +147,14 @@ def index():
                         filename=transcript_filename
                     )
 
-                # Absoluter Pfad zum Session-Ordner (Debug/Info)
+                # 4) Absoluter Pfad zum Session-Ordner
                 saved_folder = session_output
+
+                # 5) Alle Dateien im Session-Ordner als Download-Links
+                if saved_folder and os.path.isdir(saved_folder):
+                    for fname in sorted(os.listdir(saved_folder)):
+                        url = url_for("download_file", session_id=session_id, filename=fname)
+                        files.append({"name": fname, "url": url})
 
     return render_template(
         "index.html",
@@ -157,6 +163,7 @@ def index():
         transcript_download_url=transcript_download_url,
         transcript_filename=transcript_filename,
         saved_folder=saved_folder,
+        files=files,
         error=error
     )
 
@@ -168,5 +175,3 @@ def download_file(session_id, filename):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-
-
