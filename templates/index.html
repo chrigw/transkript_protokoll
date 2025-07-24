@@ -122,7 +122,7 @@ Gib die Antwort im folgenden Format aus:
     const form = document.getElementById("transcribe-form");
     const submitBtn = document.getElementById("submit-btn");
     const loading = document.getElementById("loading");
-    const resultContainer = document.getElementById("result-container");
+    let resultContainer = document.getElementById("result-container");
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -145,15 +145,19 @@ Gib die Antwort im folgenden Format aus:
       const newResult = doc.getElementById("result-container");
       if (newResult) {
         resultContainer.replaceWith(newResult);
+        resultContainer = document.getElementById("result-container");
       }
 
       // UI: re-enable button & hide spinner
       submitBtn.disabled = false;
       loading.style.display = "none";
-      // Wenn ein Ergebnis existiert, wieder einblenden
-      const updated = document.getElementById("result-container");
-      if (updated) updated.style.display = "";
+      if (resultContainer) resultContainer.style.display = "";
+
+      // ← NEU: File-Input leeren, damit beim nächsten Klick nur
+      // wirklich neu ausgewählte Audios geschickt werden
+      form.querySelector('#audio_file').value = '';
     });
   </script>
 </body>
 </html>
+
