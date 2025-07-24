@@ -59,30 +59,41 @@ def index():
             os.makedirs(session_input,  exist_ok=True)
             os.makedirs(session_output, exist_ok=True)
 
+            ############################################
             # Audiodatei in den Session-Input-Ordner speichern
             original_path = os.path.join(session_input, file.filename)
             file.save(original_path)
-            input_path = original_path
-
-            # --- optional: Audiodatei trimmen (erste 10 Sekunden) ---
-            if not skip_trimming:
-                trimmed_path = os.path.join(session_input, f"trimmed_{file.filename}")
-                try:
-                    subprocess.run([
-                        "ffmpeg", "-y",
-                        "-ss", "0",
-                        "-i", original_path,
-                        "-t", "10",
-                        "-ar", "16000",          # 16 kHz Sample-Rate
-                        "-ac", "1",              # Mono
-                        "-c:a", "pcm_s16le",     # WAV-Codec
-                        trimmed_wav
-                    ], check=True)
-                    input_path = trimmed_path.replace(".mp3", ".wav")
-                    print(f"✅ Audio-Datei getrimmt: {trimmed_path}")
-                except subprocess.CalledProcessError as e:
-                    print(f"❌ Fehler beim Trimmen der Audio-Datei: {e}")
-                    # Falls Trimmen fehlschlägt, weiter mit original_path
+            
+            # Standardmäßig arbeiten wir mit WAV (16 kHz, mono),
+            # damit WhisperX das Audio zuverlässig laden kann
+            base, _ = os.path.splitext(file.filename)
+            if skip_trimming:
+                # ganzer Clip → re-encode komplett
+                converted_wav = os.path.join(session_input, f"{base}.wav")
+                subprocess.run([
+                    "ffmpeg", "-y",
+                    "-i", original_path,
+                    "-ar", "16000",       # 16 kHz
+                    "-ac", "1",           # Mono
+                    "-c:a", "pcm_s16le",  # WAV-Codec
+                    converted_wav
+                ], check=True)
+                input_path = converted_wav
+            else:
+                # nur erste 10 s → re-encode trimmed Segment
+                trimmed_wav = os.path.join(session_input, f"trimmed_{base}.wav")
+                subprocess.run([
+                    "ffmpeg", "-y",
+                    "-ss", "0",
+                    "-i", original_path,
+                    "-t", "10",
+                    "-ar", "16000",       # 16 kHz
+                    "-ac", "1",           # Mono
+                    "-c:a", "pcm_s16le",  # WAV-Codec
+                    trimmed_wav
+                ], check=True)
+                input_path = trimmed_wav
+            ############################################
 
             # Environment für den Subprocess kopieren & anpassen
             env = os.environ.copy()
