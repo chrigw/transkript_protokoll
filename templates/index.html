@@ -19,7 +19,6 @@
 
     <div class="card mb-4 shadow-sm">
       <div class="card-body">
-        <!-- Form mit ID für JS -->
         <form id="transcribe-form" method="post" enctype="multipart/form-data">
           <div class="mb-3">
             <label for="audio_file" class="form-label">Audiodatei hochladen</label>
@@ -55,7 +54,6 @@ Gib die Antwort im folgenden Format aus:
 
           <button type="submit" class="btn btn-primary" id="submit-btn">Transkribieren</button>
 
-          <!-- Spinner, initially hidden -->
           <div id="loading" class="text-center mt-3" style="display:none;">
             <div class="spinner-border" role="status">
               <span class="visually-hidden">Lädt...</span>
@@ -66,42 +64,28 @@ Gib die Antwort im folgenden Format aus:
       </div>
     </div>
 
-    <!-- Ergebnis-Container mit ID, wird per JS ausgetauscht -->
     <div id="result-container">
       {% if transcript %}
-        <!-- Erfolgsmeldung mit Download-Links -->
         <div class="alert alert-success">
           <h4 class="alert-heading">✅ Transkription erfolgreich!</h4>
           <ul class="mb-0">
             {% if transcript_download_url %}
-            <li>
-              <a href="{{ transcript_download_url }}">
-                Roh-Transkript (TXT): {{ transcript_filename }}
-              </a>
-            </li>
+              <li>
+                <a href="{{ transcript_download_url }}">
+                  Roh-Transkript (TXT): {{ transcript_filename }}
+                </a>
+              </li>
             {% endif %}
             {% if excerpt_pdf_url %}
-            <li>
-              <a href="{{ excerpt_pdf_url }}">
-                Protokoll-Auszug (PDF) herunterladen
-              </a>
-            </li>
+              <li>
+                <a href="{{ excerpt_pdf_url }}">
+                  Protokoll-Auszug (PDF) herunterladen
+                </a>
+              </li>
             {% endif %}
           </ul>
-
-          {% if files %}
-          <div class="mt-3">
-            <h6>Alle gespeicherten Dateien:</h6>
-            <ul>
-              {% for file in files %}
-              <li><a href="{{ file.url }}">{{ file.name }}</a></li>
-              {% endfor %}
-            </ul>
-          </div>
-          {% endif %}
         </div>
 
-        <!-- Anzeige des reinen Transkripts -->
         <div class="card mb-4 shadow-sm">
           <div class="card-header">
             <h5 class="mb-0">Ergebnis</h5>
@@ -127,18 +111,15 @@ Gib die Antwort im folgenden Format aus:
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      // UI: disable button, show spinner, hide old results
       submitBtn.disabled = true;
       loading.style.display = "block";
       resultContainer.style.display = "none";
 
-      // Sende das Formular per Fetch
       const res = await fetch(form.action || "/", {
         method: form.method,
         body: new FormData(form),
       });
 
-      // Empfange komplettes HTML, parse & tausche nur das result-container DIV aus
       const html = await res.text();
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, "text/html");
@@ -148,16 +129,13 @@ Gib die Antwort im folgenden Format aus:
         resultContainer = document.getElementById("result-container");
       }
 
-      // UI: re-enable button & hide spinner
       submitBtn.disabled = false;
       loading.style.display = "none";
       if (resultContainer) resultContainer.style.display = "";
 
-      // ← NEU: File-Input leeren, damit beim nächsten Klick nur
-      // wirklich neu ausgewählte Audios geschickt werden
+      // File-Input zurücksetzen
       form.querySelector('#audio_file').value = '';
     });
   </script>
 </body>
 </html>
-
