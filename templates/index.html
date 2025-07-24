@@ -69,15 +69,38 @@ Gib die Antwort im folgenden Format aus:
     <!-- Ergebnis-Container mit ID, wird per JS ausgetauscht -->
     <div id="result-container">
       {% if transcript %}
+        <!-- Erfolgsmeldung mit Download-Links -->
+        <div class="alert alert-success">
+          <h4 class="alert-heading">✅ Transkription erfolgreich!</h4>
+          <ul class="mb-0">
+            {% if transcript_download_url %}
+            <li>
+              <a href="{{ transcript_download_url }}">
+                Roh-Transkript (TXT): {{ transcript_filename }}
+              </a>
+            </li>
+            {% endif %}
+            {% if excerpt_pdf_url %}
+            <li>
+              <a href="{{ excerpt_pdf_url }}">
+                Protokoll-Auszug (PDF) herunterladen
+              </a>
+            </li>
+            {% endif %}
+            <li>
+              Dateien gespeichert unter:
+              <code>{{ saved_folder }}</code>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Anzeige des reinen Transkripts -->
         <div class="card mb-4 shadow-sm">
           <div class="card-header">
             <h5 class="mb-0">Ergebnis</h5>
           </div>
           <div class="card-body">
             <pre class="bg-white p-3">{{ transcript }}</pre>
-            {% if excerpt_pdf_url %}
-              <a href="{{ excerpt_pdf_url }}" class="btn btn-success mt-3">Protokoll-Auszug als PDF herunterladen</a>
-            {% endif %}
           </div>
         </div>
       {% endif %}
@@ -127,4 +150,3 @@ Gib die Antwort im folgenden Format aus:
   </script>
 </body>
 </html>
-
