@@ -75,7 +75,7 @@ def transkribiere_audio_mit_diarisation(audio_pfad, sprache="de"):
     """
     Transkribiert Audio mit WhisperX und optional mit Sprecher-Diarisation.
     """
-    model = whisperx.load_model("small", device, compute_type="float32")  # tiny, small, medium
+    model = whisperx.load_model("tiny", device, compute_type="float32")  # tiny, small, medium
 
     # Load and verify audio
     audio_np = wx_audio.load_audio(str(audio_pfad))
