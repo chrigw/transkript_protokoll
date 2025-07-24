@@ -79,21 +79,17 @@ def transkribiere_audio_mit_diarisation(audio_pfad, sprache="de"):
     # WhisperX-Modell laden (hier: tiny für geringeren Speicherbedarf)
     model = whisperx.load_model("tiny", device, compute_type="float32")
 
-    ###########################################
-    # result = model.transcribe(audio_pfad, batch_size=16, language=sprache)
-
-    # Lade Audio selbst und prüfe auf None
+    # ─── NEUER BLOCK: lade Audio via ffmpeg intern und prüfe auf None ───
     audio_np = wx_audio.load_audio(str(audio_pfad))
     if audio_np is None or not isinstance(audio_np, np.ndarray):
         raise RuntimeError(f"⚠️ FFmpeg konnte '{audio_pfad}' nicht dekodieren!")
 
-    # ASR-Aufruf mit dem numpy-Array statt mit dem Pfad
+    # ─── ASR-Aufruf mit dem numpy-Array statt mit dem Pfad ───
     result = model.transcribe(
         audio_np,
         batch_size=16,
         language=sprache
     )
-    ###########################################
 
     segments = result["segments"]
     output = []
