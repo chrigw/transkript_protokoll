@@ -20,10 +20,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.lib.enums import TA_LEFT
 
-###########################################
 import numpy as np
 import whisperx.audio as wx_audio
-###########################################
 
 
 # .env-Datei laden (OPENAI_API_KEY, HUGGINGFACE_HUB_TOKEN, SKIP_DIARIZATION)
@@ -239,10 +237,14 @@ if __name__ == "__main__":
     # 1) ffmpeg prüfen
     pruefe_ffmpeg()
 
-    # 2) Meeting-Audio erzeugen oder laden
-    audio_pfad = os.path.join("input_data", "meeting_audio.mp3")
-    if not os.path.exists(audio_pfad):
-        audio_pfad = asyncio.run(erstelle_meeting_audio())
+    # 2) Audio-Pfad aus CLI-Argument (z.B. vom Flask-Frontend)
+    if len(sys.argv) >= 2 and sys.argv[1]:
+        audio_pfad = sys.argv[1]
+    else:
+        # kein Argument: alter Fallback für TTS-Test
+        audio_pfad = os.path.join("input_data", "meeting_audio.mp3")
+        if not os.path.exists(audio_pfad):
+            audio_pfad = asyncio.run(erstelle_meeting_audio())
 
     # 3) Audio transkribieren
     transkript_liste = transkribiere_audio_mit_diarisation(audio_pfad)
