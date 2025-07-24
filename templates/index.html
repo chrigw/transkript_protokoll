@@ -92,6 +92,17 @@ Gib die Antwort im folgenden Format aus:
               <code>{{ saved_folder }}</code>
             </li>
           </ul>
+
+          {% if files %}
+          <div class="mt-3">
+            <h6>Alle gespeicherten Dateien:</h6>
+            <ul>
+              {% for file in files %}
+              <li><a href="{{ file.url }}">{{ file.name }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
         </div>
 
         <!-- Anzeige des reinen Transkripts -->
@@ -150,3 +161,4 @@ Gib die Antwort im folgenden Format aus:
   </script>
 </body>
 </html>
+
