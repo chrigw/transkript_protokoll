@@ -35,7 +35,14 @@ if skip_trimming:
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # … Deine vorherigen Variablen-Initialisierungen …
+    # ─── Initialisiere hier alle Variablen ───
+    transcript              = None
+    excerpt_pdf_url         = None
+    transcript_download_url = None
+    transcript_filename     = None
+    saved_folder            = None
+    files                   = []
+    error                   = None
 
     if request.method == "POST":
         file   = request.files.get("audio_file")
@@ -50,32 +57,30 @@ def index():
             os.makedirs(session_input, exist_ok=True)
             os.makedirs(session_output, exist_ok=True)
 
-            # Audiodatei speichern
+            # Audiodatei speichern und ggf. trimmen/konvertieren...
             original_path = os.path.join(session_input, file.filename)
             file.save(original_path)
-
-            # in WAV (16 kHz Mono) umwandeln, je nach skip_trimming
             base, _ = os.path.splitext(file.filename)
             if skip_trimming:
-                # gesamtes File
                 converted_wav = os.path.join(session_input, f"{base}.wav")
-                subprocess.run([
-                    "ffmpeg", "-y", "-i", original_path,
-                    "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
-                    converted_wav
-                ], check=True)
+                subprocess.run(
+                    ["ffmpeg","-y","-i",original_path,
+                     "-ar","16000","-ac","1","-c:a","pcm_s16le",
+                     converted_wav],
+                    check=True
+                )
                 input_path = converted_wav
             else:
-                # nur erste 10 Sekunden
                 trimmed_wav = os.path.join(session_input, f"trimmed_{base}.wav")
-                subprocess.run([
-                    "ffmpeg", "-y", "-ss", "0", "-i", original_path,
-                    "-t", "10", "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
-                    trimmed_wav
-                ], check=True)
+                subprocess.run(
+                    ["ffmpeg","-y","-ss","0","-i",original_path,
+                     "-t","10","-ar","16000","-ac","1","-c:a","pcm_s16le",
+                     trimmed_wav],
+                    check=True
+                )
                 input_path = trimmed_wav
 
-            # → Dieser Block steht jetzt NACH dem if/else und wird IMMER ausgeführt:
+            # Subprocess-Call (steht *außen* if/else)
             env = os.environ.copy()
             if prompt:
                 env["USER_PROMPT"] = prompt
@@ -90,12 +95,8 @@ def index():
 
             stdout = proc.stdout.decode("utf-8", errors="replace")
             stderr = proc.stderr.decode("utf-8", errors="replace")
-
-            # Debug-Logging
-            print("=== Transkriptionsskript STDOUT ===")
-            print(stdout)
-            print("=== Transkriptionsskript STDERR ===")
-            print(stderr)
+            print("=== Transkriptionsskript STDOUT ==="); print(stdout)
+            print("=== Transkriptionsskript STDERR ==="); print(stderr)
             print("=== Return Code:", proc.returncode, "===\n")
 
             if proc.returncode != 0:
@@ -147,13 +148,13 @@ def index():
                         url = url_for("download_file", session_id=session_id, filename=fname)
                         files.append({"name": fname, "url": url})
 
+    # render_template nutzt jetzt garantiert definierte Variablen
     return render_template(
         "index.html",
         transcript=transcript,
         excerpt_pdf_url=excerpt_pdf_url,
         transcript_download_url=transcript_download_url,
         transcript_filename=transcript_filename,
-        saved_folder=saved_folder,
         files=files,
         error=error
     )
