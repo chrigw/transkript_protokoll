@@ -35,13 +35,7 @@ if skip_trimming:
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    transcript                 = None
-    excerpt_pdf_url            = None
-    transcript_download_url    = None
-    transcript_filename        = None
-    saved_folder               = None
-    files                      = []
-    error                      = None
+    # … Deine vorherigen Variablen-Initialisierungen …
 
     if request.method == "POST":
         file   = request.files.get("audio_file")
@@ -50,58 +44,43 @@ def index():
         if not file or not file.filename:
             error = "Keine Datei ausgewählt."
         else:
-            # Einmalige Session-ID erzeugen
-            session_id = uuid.uuid4().hex
-
-            # Session-spezifische Ordner anlegen
-            session_input  = os.path.join(INPUT_DIR,  session_id)
+            session_id     = uuid.uuid4().hex
+            session_input  = os.path.join(INPUT_DIR, session_id)
             session_output = os.path.join(OUTPUT_DIR, session_id)
-            os.makedirs(session_input,  exist_ok=True)
+            os.makedirs(session_input, exist_ok=True)
             os.makedirs(session_output, exist_ok=True)
 
-            ############################################
-            # Audiodatei in den Session-Input-Ordner speichern
+            # Audiodatei speichern
             original_path = os.path.join(session_input, file.filename)
             file.save(original_path)
-            
-            # Standardmäßig arbeiten wir mit WAV (16 kHz, mono),
-            # damit WhisperX das Audio zuverlässig laden kann
+
+            # in WAV (16 kHz Mono) umwandeln, je nach skip_trimming
             base, _ = os.path.splitext(file.filename)
             if skip_trimming:
-                # ganzer Clip → re-encode komplett
+                # gesamtes File
                 converted_wav = os.path.join(session_input, f"{base}.wav")
                 subprocess.run([
-                    "ffmpeg", "-y",
-                    "-i", original_path,
-                    "-ar", "16000",       # 16 kHz
-                    "-ac", "1",           # Mono
-                    "-c:a", "pcm_s16le",  # WAV-Codec
+                    "ffmpeg", "-y", "-i", original_path,
+                    "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
                     converted_wav
                 ], check=True)
                 input_path = converted_wav
             else:
-                # nur erste 10 s → re-encode trimmed Segment
+                # nur erste 10 Sekunden
                 trimmed_wav = os.path.join(session_input, f"trimmed_{base}.wav")
                 subprocess.run([
-                    "ffmpeg", "-y",
-                    "-ss", "0",
-                    "-i", original_path,
-                    "-t", "10",
-                    "-ar", "16000",       # 16 kHz
-                    "-ac", "1",           # Mono
-                    "-c:a", "pcm_s16le",  # WAV-Codec
+                    "ffmpeg", "-y", "-ss", "0", "-i", original_path,
+                    "-t", "10", "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
                     trimmed_wav
                 ], check=True)
                 input_path = trimmed_wav
-            ############################################
 
-            # Environment für den Subprocess kopieren & anpassen
+            # → Dieser Block steht jetzt NACH dem if/else und wird IMMER ausgeführt:
             env = os.environ.copy()
             if prompt:
                 env["USER_PROMPT"] = prompt
             env["OUTPUT_DIR"] = session_output
 
-            # Transkriptionsskript aufrufen
             proc = subprocess.run(
                 [sys.executable, SCRIPT_PATH, input_path],
                 stdout=subprocess.PIPE,
@@ -109,7 +88,6 @@ def index():
                 env=env
             )
 
-            # Ausgaben dekodieren
             stdout = proc.stdout.decode("utf-8", errors="replace")
             stderr = proc.stderr.decode("utf-8", errors="replace")
 
